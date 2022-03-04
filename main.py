@@ -14,7 +14,6 @@ TG_GROUP=os.environ['TG_GROUP']
 APP_VERSION=os.environ['APP_VERSION']
 app = Flask(__name__)
 
-
 @app.route('/')
 def index():
     index_file = "index.html"
@@ -27,7 +26,7 @@ def version():
 
 @app.route("/send/<message>")
 def send(message):
-    if len(message) >= 40:
+    if len(message) >= 4096:
         value = {"status": "not sent","reason": "El mensaje no puede superar los 4096 caracteres."}
         return jsonify(value)
     if send_tg_message(TG_TOKEN,TG_GROUP,escape(message)):
