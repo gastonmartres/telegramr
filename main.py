@@ -11,6 +11,7 @@ import os
 
 TG_TOKEN=os.environ['TG_TOKEN']
 TG_GROUP=os.environ['TG_GROUP']
+APP_TOKEN=os.environ['APP_TOKEN']
 APP_VERSION=os.environ['APP_VERSION']
 app = Flask(__name__)
 
@@ -26,15 +27,23 @@ def version():
 
 @app.route("/send/<message>")
 def send(message):
-    if len(message) >= 4096:
-        value = {"status": "not sent","reason": "El mensaje no puede superar los 4096 caracteres."}
-        return jsonify(value)
-    if send_tg_message(TG_TOKEN,TG_GROUP,escape(message)):
-        value =  {"status": "sent", "message": escape(message)}
+    token = request.args.get('token')
+    if token != APP_TOKEN:
+        value = {"status": "not sent","reason": "El token no es conocido."}
         return jsonify(value)
     else:
-        value = {"status": "not sent", "reason": "not sent"}
-        return jsonify(value)
+        if len(message) >= 4096:
+            value = {"status": "not sent","reason": "El mensaje no puede superar los 4096 caracteres."}
+            return jsonify(value)
+        if len(message) <= 1:
+            value = {"status": "not sent","reason": "El mensaje no puede ser menor a 1 caracter."}
+            return jsonify(value)
+        if send_tg_message(TG_TOKEN,TG_GROUP,escape(message)):
+            value =  {"status": "sent", "message": escape(message)}
+            return jsonify(value)
+        else:
+            value = {"status": "not sent", "reason": "not sent"}
+            return jsonify(value)
 
 
 def send_tg_message(TG_TOKEN,TG_GROUP,TG_MESSAGE):
