@@ -3,15 +3,17 @@
 # Author: Gaston Martres <gastonmartres@gmail.com>
 
 import json
-from flask import Flask, render_template, jsonify, make_response, request
+from flask import Flask, render_template, jsonify, make_response, request, abort
 from markupsafe import escape
 import telebot
 import time
 import os
 
 TG_TOKEN=os.environ['TG_TOKEN']
-TG_GROUP=os.environ['TG_GROUP']
+#TG_GROUP=os.environ['TG_GROUP']
+TG_CHANNEL=os.environ['TG_CHANNEL']
 APP_TOKEN=os.environ['APP_TOKEN']
+print(APP_TOKEN)
 APP_VERSION=os.environ['APP_VERSION']
 app = Flask(__name__)
 
@@ -25,12 +27,16 @@ def version():
     version = {"version": APP_VERSION}
     return jsonify(version)
 
-@app.route("/send/<message>")
-def send(message):
+@app.route("/send")
+def send():
+    #tg_token = request.arts.get('tg_token')
+    #channel = request.args.get('channel')
+    message = request.args.get('message')
     token = request.args.get('token')
     if token != APP_TOKEN:
         value = {"status": "not sent","reason": "El token no es conocido."}
-        return jsonify(value)
+        abort(403, "No identificado")
+        #return jsonify(value)
     else:
         if len(message) >= 4096:
             value = {"status": "not sent","reason": "El mensaje no puede superar los 4096 caracteres."}
@@ -38,7 +44,7 @@ def send(message):
         if len(message) <= 1:
             value = {"status": "not sent","reason": "El mensaje no puede ser menor a 1 caracter."}
             return jsonify(value)
-        if send_tg_message(TG_TOKEN,TG_GROUP,escape(message)):
+        if send_tg_message(TG_TOKEN,TG_CHANNEL,escape(message)):
             value =  {"status": "sent", "message": escape(message)}
             return jsonify(value)
         else:
