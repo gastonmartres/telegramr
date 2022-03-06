@@ -45,7 +45,10 @@ def send():
         if len(message) <= 1:
             abort(413,"El mensaje no puede ser menor a 1 caracter.")
         if send_tg_message(TG_TOKEN,TG_CHANNEL,escape(message)):
-            value =  {"status": "sent", "message": escape(message)}
+            if APP_DEBUG:
+                value = {"status": "sent", "message": escape(message)}
+            else:
+                value = {"status": "sent"}
             return jsonify(value)
         else:
             abort(420,"Whaaaaaaaat?")
