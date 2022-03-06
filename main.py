@@ -9,12 +9,16 @@ import telebot
 import time
 import os
 
+
+# Telegram variables
 TG_TOKEN=os.environ['TG_TOKEN']
-#TG_GROUP=os.environ['TG_GROUP']
 TG_CHANNEL=os.environ['TG_CHANNEL']
+
+# App variables
+APP_DEBUG=os.environ['APP_DEBUG']
 APP_TOKEN=os.environ['APP_TOKEN']
-print(APP_TOKEN)
 APP_VERSION=os.environ['APP_VERSION']
+
 app = Flask(__name__)
 
 @app.route('/')
@@ -29,12 +33,11 @@ def version():
 
 @app.route("/send")
 def send():
-    #tg_token = request.arts.get('tg_token')
+    #tg_token = request.args.get('tg_token')
     #channel = request.args.get('channel')
     message = request.args.get('message')
     token = request.args.get('token')
     if token != APP_TOKEN:
-        value = {"status": "not sent","reason": "El token no es conocido."}
         abort(401, "Token no autorizado.")
     else:
         if len(message) >= 4096:
