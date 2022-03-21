@@ -3,7 +3,8 @@
 # Author: Gaston Martres <gastonmartres@gmail.com>
 
 import json
-from flask import Flask, render_template, jsonify, make_response, request, abort
+from flask import Flask, render_template, jsonify, make_response, request, abort, flash
+from werkzeug.utils import secure_filename
 from markupsafe import escape
 import telebot
 import time
@@ -21,8 +22,12 @@ APP_VERSION=os.environ['APP_VERSION']
 
 app = Flask(__name__)
 
+# Configuraciones varias
+app.config['UPLOAD_FOLDER'] = "/tmp"
+
 @app.route('/')
 def index():
+    print(request.headers)
     index_file = "index.html"
     return render_template(index_file)
 
@@ -53,13 +58,34 @@ def send():
         else:
             abort(420,"Whaaaaaaaat?")
 
-def send_tg_message(TG_TOKEN,TG_GROUP,TG_MESSAGE):
+@app.route("/post", methods=['POST'])
+def post():
+    message = request.form.get('message')
+    token = request.form.get('token')
+    if token != APP_TOKEN:
+        abort(401, "Token no autorizado.")
+    else:
+        file = request.files['image']
+        filename = secure_filename(file.filename)
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'],filename))
+        send_tg_image(TG_TOKEN,TG_CHANNEL,os.path.join(app.config['UPLOAD_FOLDER'],filename),message)
+        value = value = {"status": "sent"}
+        return jsonify(value)
+
+def send_tg_message(TG_TOKEN,TG_CHANNEL,TG_MESSAGE):
     try:
         bot = telebot.TeleBot(TG_TOKEN)
-    
-        bot.send_message(TG_GROUP,TG_MESSAGE)
+        bot.send_message(TG_CHANNEL,TG_MESSAGE)
         return True
     except Exception as e:
         print(e)
         return False
 
+def send_tg_image(TG_TOKEN,TG_CHANNEL,image,message=''):
+    try: 
+        bot = telebot.TeleBot(TG_TOKEN)
+        bot.send_photo(TG_CHANNEL, photo=open(image,'rb'),caption=message)
+        return True
+    except Exception as e:
+        print(e)
+        return False
