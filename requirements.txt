@@ -2,3 +2,4 @@ pip
 flask
 pyTelegramBotAPI
 MarkupSafe
+werkzeug
