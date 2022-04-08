@@ -20,10 +20,10 @@ mark_warning = u'\U000026A0'
 m_sent = 0
 m_unsent = 0
 start_timestamp = datetime.timestamp(datetime.now())
+http_400 = 0
 http_401 = 0
 http_413 = 0
-http_420 = 0
-
+http_418 = 0
 
 # Telegram variables
 TG_TOKEN=os.environ['TG_TOKEN']
@@ -39,16 +39,18 @@ app = Flask(__name__)
 # Configuraciones varias
 app.config['UPLOAD_FOLDER'] = "/tmp"
 
+# root
 @app.route('/')
 def index():
     index_file = "index.html"
     return render_template(index_file)
 
+# Funcion que devuelve metricas de la app.
 @app.route('/health')
 def health():
-    global http_401,http_413,http_420,m_sent,m_unsent
+    global http_400,http_401,http_413,http_418,m_sent,m_unsent
     uptime = int(datetime.timestamp(datetime.now())) - int(start_timestamp)
-    body = "http_401 " + str(http_401) + "\nhttp_413 " + str(http_413) + "\nhttp_420 " + str(http_420) + "\nmessages_sent " + str(m_sent) + "\nmessages_unsent " + str(m_unsent) + "\npod_started " + str(int(start_timestamp)) + "\npod_uptime " + str(uptime) + "\n\n"
+    body = "http_400 " + str(http_400) + "\nhttp_401 " + str(http_401) + "\nhttp_413 " + str(http_413) + "\nhttp_418 " + str(http_418) + "\nmessages_sent " + str(m_sent) + "\nmessages_unsent " + str(m_unsent) + "\npod_started " + str(int(start_timestamp)) + "\npod_uptime " + str(uptime) + "\n\n"
     return body
 
 @app.route("/version")
@@ -56,14 +58,25 @@ def version():
     version = {"version": APP_VERSION}
     return jsonify(version)
 
+
+# Funcion que recibe la peticion de enviar un mensaje
+# Utilizando solo parametros de un GET.
 @app.route("/send")
 def send():
-    global http_401,http_413,http_420,m_sent,m_unsent
+    global http_400,http_401,http_413,http_418,m_sent,m_unsent
     #tg_token = request.args.get('tg_token')
     #channel = request.args.get('channel')
     message = request.args.get('message')
+    print(message)
     token = request.args.get('token')
+    print(token)
     severity = escape(request.args.get('severity'))
+    print(severity)
+    
+    if severity.isnumeric() == False:
+        http_400+=1
+        abort(400,"El parametro severity debe ser numerico: 0,1,2")
+    
     if token != APP_TOKEN:
         http_401+=1
         abort(401, "Token no autorizado.")
@@ -82,18 +95,24 @@ def send():
             m_sent+=1
             return jsonify(value)
         else:
-            http_420+=1
-            abort(420,"Whaaaaaaaat?")
+            http_418+=1
+            abort(418,"Whaaaaaaaat?")
 
+# Funcion de POST que incluye la posibilidad de enviar imagenes.
 @app.route("/post", methods=['POST'])
 def post():
-    global http_401,http_413,http_420,m_sent,m_unsent
+    global http_400,http_401,http_413,http_418,m_sent,m_unsent
     message = request.form.get('message')
     token = request.form.get('token')
     severity = escape(request.form.get('severity'))
+    if severity.isnumeric() == False:
+        http_400+=1
+        abort(400,"El parametro severity debe ser numerico: 0,1,2")
+        
     if token != APP_TOKEN:
         http_401+=1
         abort(401, "Token no autorizado.")
+
     else:
         file = request.files['image']
         filename = secure_filename(file.filename)
@@ -103,32 +122,35 @@ def post():
         value = value = {"status": "sent"}
         return jsonify(value)
 
-def send_tg_message(TG_TOKEN,TG_CHANNEL,TG_MESSAGE,severity="NORMAL"):
+# Funcion para el envio de mensaje via Telegram
+def send_tg_message(TG_TOKEN,TG_CHANNEL,TG_MESSAGE,severity=0):
+    
     try:
-        if severity == "WARNING":
-            message = mark_warning + " WARNING " + mark_warning + "\n" + TG_MESSAGE
-        elif severity == "NORMAL":
+        if severity == 0:
             message = mark_ok + " SUCCESS " + mark_ok + "\n" + TG_MESSAGE
-        elif severity =="ERROR":
+        elif severity == 1:
+            message = mark_warning + " WARNING " + mark_warning + "\n" + TG_MESSAGE
+        elif severity == 2:
             message = mark_error + " ERROR " + mark_error + "\n" + TG_MESSAGE
+
         bot = telebot.TeleBot(TG_TOKEN)
+        print(message)
         bot.send_message(TG_CHANNEL,message)
         return True
     except Exception as e:
         print(e)
         return False
 
-def send_tg_image(TG_TOKEN,TG_CHANNEL,image,TG_MESSAGE='',severity="NORMAL"):
+# Funcion para el envio de imagen via Telegram, junto con una descripcion opcional.
+def send_tg_image(TG_TOKEN,TG_CHANNEL,image,TG_MESSAGE='',severity=0):
     try: 
-        if severity == "WARNING":
-            message = mark_warning + " WARNING " + mark_warning + "\n" + TG_MESSAGE
-            print("WARNING")
-        elif severity == "NORMAL":
+        if severity == 0:
             message = mark_ok + " SUCCESS " + mark_ok + "\n" + TG_MESSAGE
-            print("NORMAL")
-        elif severity =="ERROR":
+        elif severity == 1 :
+            message = mark_warning + " WARNING " + mark_warning + "\n" + TG_MESSAGE
+        elif severity == 2:
             message = mark_error + " ERROR " + mark_error + "\n" + TG_MESSAGE
-            print("ERROR")
+
         bot = telebot.TeleBot(TG_TOKEN)
         bot.send_photo(TG_CHANNEL, photo=open(image,'rb'),caption=message)
         return True

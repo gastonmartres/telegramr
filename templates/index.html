@@ -22,8 +22,17 @@
                 <h2>Una idea en desarrollo</h2>
             </div>
             <div class="row">
-                <p>Invocaciones a la API:</p>
-                <code>blablabla</code>
+                <p>Ejemplos de invocacion a la API:</p>
+                <br>
+                <div class="row">
+                    <p>Send text message</p>
+                    <code>curl -v -G http://localhost:8080/send -d token=1234asdf --data-urlencode 'message=El proceso se completó exitosamente.' -d severity=0</code>
+                </div>
+                <br>
+                <div class="row">
+                    <p>Send image with caption</p>
+                    <code>curl -X POST -F 'image=@./telegrams.png' -F token=1234asdf http://localhost:8080/post -F severity=1 -F message="El proceso se completó con errores."</code>
+                </div>
             </div>
         </div>
     </body>
