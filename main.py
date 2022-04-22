@@ -1,7 +1,11 @@
 #!/usr/bin/python3
 #  -*- coding: utf-8 -*-
 # Author: Gaston Martres <gastonmartres@gmail.com>
-
+# 
+# TO-DO
+# 1. check for allowed file extensions.
+# 
+# 
 import json
 from datetime import datetime
 from flask import Flask, render_template, jsonify, make_response, request, abort, flash
