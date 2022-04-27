@@ -26,6 +26,7 @@ m_unsent = 0
 start_timestamp = datetime.timestamp(datetime.now())
 http_400 = 0
 http_401 = 0
+http_406 = 0
 http_413 = 0
 http_418 = 0
 
@@ -37,7 +38,7 @@ TG_CHANNEL=os.environ['TG_CHANNEL']
 APP_DEBUG=os.environ['APP_DEBUG']
 APP_TOKEN=os.environ['APP_TOKEN']
 APP_VERSION=os.environ['APP_VERSION']
-
+ALLOWED_EXTENSIONS = {'jpg','jpeg','png','gif'}
 app = Flask(__name__)
 
 # Configuraciones varias
@@ -54,7 +55,7 @@ def index():
 def health():
     global http_400,http_401,http_413,http_418,m_sent,m_unsent
     uptime = int(datetime.timestamp(datetime.now())) - int(start_timestamp)
-    body = "http_400 " + str(http_400) + "\nhttp_401 " + str(http_401) + "\nhttp_413 " + str(http_413) + "\nhttp_418 " + str(http_418) + "\nmessages_sent " + str(m_sent) + "\nmessages_unsent " + str(m_unsent) + "\npod_started " + str(int(start_timestamp)) + "\npod_uptime " + str(uptime) + "\n\n"
+    body = "http_400 " + str(http_400) + "\nhttp_401 " + str(http_401) + "\nhttp_406 " + str(http_406) + "\nhttp_413 " + str(http_413) + "\nhttp_418 " + str(http_418) + "\nmessages_sent " + str(m_sent) + "\nmessages_unsent " + str(m_unsent) + "\npod_started " + str(int(start_timestamp)) + "\npod_uptime " + str(uptime) + "\n\n"
     return body
 
 @app.route("/version")
@@ -104,7 +105,7 @@ def send():
 @app.route("/post", methods=['POST'])
 def post():
     try:
-        global http_400,http_401,http_413,http_418,m_sent,m_unsent
+        global http_400,http_401,http_406,http_413,http_418,m_sent,m_unsent
         message = request.form.get('message')
         token = request.form.get('token')
         severity = escape(request.form.get('severity'))
@@ -119,12 +120,25 @@ def post():
 
         else:
             file = request.files['image']
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'],filename))
-            send_tg_image(TG_TOKEN,TG_CHANNEL,os.path.join(app.config['UPLOAD_FOLDER'],filename),message,severity)
-            m_sent+=1
-            value = value = {"status": "sent"}
-            return jsonify(value)
+            if file.filename != '': # Chequeamos que el nombre no esté vacio
+                filename = secure_filename(file.filename)
+                if filename.rsplit('.',1)[1].lower() in ALLOWED_EXTENSIONS: # chequeamos que el archivo contenga una extension permitida. 
+                    print("File extension allowed: %s" % (filename))
+                    file.save(os.path.join(app.config['UPLOAD_FOLDER'],filename))
+                    send_tg_image(TG_TOKEN,TG_CHANNEL,os.path.join(app.config['UPLOAD_FOLDER'],filename),message,severity)
+                    m_sent+=1
+                    value = {"status": "sent"}
+                    return jsonify(value)
+                else:
+                    http_406+=1
+                    print(http_406)
+                    print("File extension not allowed: %s" % (filename))
+                    value = {"error":"El archivo no se encuentra en las extensiones permitidas."}
+                    return value
+            else:
+                http_406+=1
+                value = {"error":"El archivo no puede tener un nombre vacio."}
+                return value
     except Exception as e:
         return False
         
@@ -150,8 +164,6 @@ def send_tg_message(TG_TOKEN,TG_CHANNEL,message,severity=0):
 
 # Funcion para el envio de imagen via Telegram, junto con una descripcion opcional.
 def send_tg_image(TG_TOKEN,TG_CHANNEL,image,TG_MESSAGE='',severity=0):
-    print("Funcion send_tg_image")
-    print(type(severity))
     try: 
         if severity == "0":
             message = mark_ok + " SUCCESS " + mark_ok + "\n" + TG_MESSAGE
