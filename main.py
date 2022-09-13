@@ -17,8 +17,11 @@ import os
 
 # Unicode chars
 mark_ok = u'\U00002705'
-mark_error = u'\U0000274C'
+mark_info = u'\U00002757'
 mark_warning = u'\U000026A0'
+mark_warning2 = u'\U00002049'
+mark_error = u'\U0000274C'
+mark_disaster = u'\U0001F525'
 
 # Health Variables
 m_sent = 0
@@ -39,6 +42,7 @@ APP_DEBUG=os.environ['APP_DEBUG']
 APP_TOKEN=os.environ['APP_TOKEN']
 APP_VERSION=os.environ['APP_VERSION']
 ALLOWED_EXTENSIONS = {'jpg','jpeg','png','gif'}
+
 app = Flask(__name__)
 
 # Configuraciones varias
@@ -70,11 +74,8 @@ def version():
 def send():
     global http_400,http_401,http_413,http_418,m_sent,m_unsent
     message = request.args.get('message')
-    print(message)
     token = request.args.get('token')
-    print(token)
     severity = escape(request.args.get('severity'))
-    print(severity)
     
     if severity.isnumeric() == False:
         http_400+=1
@@ -144,14 +145,30 @@ def post():
         
 # Funcion para el envio de mensaje via Telegram
 def send_tg_message(TG_TOKEN,TG_CHANNEL,message,severity=0):
+    """
+     Teniendo en cuenta como envia el codigo de severity Zabbix, hacemos el cambio en esta parte del codigo.
+
+         0 - En esta parte lo tomamos como Ok
+         1 - Info
+         2 - Warning
+         3 - Average
+         4 - High
+         5 - Disaster
+
+    """
     try:
         if severity == "0":
             message = mark_ok + " SUCCESS " + mark_ok + "\n" + message
         elif severity == "1":
-            message = mark_warning + " WARNING " + mark_warning + "\n" + message
+            message = mark_info + " INFO " + mark_info + "\n" + message
         elif severity == "2":
-            print("severity: " + severity)
+            message = mark_warning + " WARNING " + mark_warning + "\n" + message
+        elif severity == "3":
+            message = mark_warning2 + " WARNING " + mark_warning2 + "\n" + message
+        elif severity == "4":
             message = mark_error + " ERROR " + mark_error + "\n" + message
+        elif severity == "5":
+            message = mark_disaster + " DISASTER " + mark_disaster + "\n" + message
         else: 
             print("Siguió de largo el if")
             return False
@@ -166,12 +183,18 @@ def send_tg_message(TG_TOKEN,TG_CHANNEL,message,severity=0):
 def send_tg_image(TG_TOKEN,TG_CHANNEL,image,TG_MESSAGE='',severity=0):
     try: 
         if severity == "0":
-            message = mark_ok + " SUCCESS " + mark_ok + "\n" + TG_MESSAGE
-        elif severity == "1" :
-            message = mark_warning + " WARNING " + mark_warning + "\n" + TG_MESSAGE
+            message = mark_ok + " SUCCESS " + mark_ok + "\n" + message
+        elif severity == "1":
+            message = mark_info + " INFO " + mark_info + "\n" + message
         elif severity == "2":
-            message = mark_error + " ERROR " + mark_error + "\n" + TG_MESSAGE
-        else:
+            message = mark_warning + " WARNING " + mark_warning + "\n" + message
+        elif severity == "3":
+            message = mark_warning2 + " WARNING " + mark_warning2 + "\n" + message
+        elif severity == "4":
+            message = mark_error + " ERROR " + mark_error + "\n" + message
+        elif severity == "5":
+            message = mark_disaster + " DISASTER " + mark_disaster + "\n" + message
+        else: 
             print("Siguió de largo el if")
             return False
         bot = telebot.TeleBot(TG_TOKEN)
